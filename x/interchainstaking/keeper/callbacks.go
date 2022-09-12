@@ -110,7 +110,7 @@ func ValidatorCallback(k Keeper, ctx sdk.Context, args []byte, query icqtypes.Qu
 	if !found {
 		return fmt.Errorf("no registered zone for chain id: %s", query.GetChainId())
 	}
-	return SetValidatorForZone(k, ctx, zone, args)
+	return SetValidatorForZone(k, ctx, &zone, args)
 }
 
 func RewardsCallback(k Keeper, ctx sdk.Context, args []byte, query icqtypes.Query) error {
@@ -234,8 +234,10 @@ func DepositIntervalCallback(k Keeper, ctx sdk.Context, args []byte, query icqty
 		return err
 	}
 
+	k.Logger(ctx).Info("GetTxs", txs)
+
 	// TODO: use pagination.GetTotal() to dispatch the correct number of requests now; rather than iteratively.
-	if len(txs.GetTxs()) == types.TxRetrieveCount {
+	if len(txs.Pagination.NextKey) > 0 {
 		req := tx.GetTxsEventRequest{}
 		if bytes.Equal(query.Request, []byte("")) {
 			return fmt.Errorf("attempted to unmarshal zero length byte slice (5)")
@@ -244,8 +246,7 @@ func DepositIntervalCallback(k Keeper, ctx sdk.Context, args []byte, query icqty
 		if err != nil {
 			return err
 		}
-		req.Pagination.Offset += req.Pagination.Limit
-
+		req.Pagination.Key = txs.Pagination.NextKey
 		k.ICQKeeper.MakeRequest(ctx, query.ConnectionId, query.ChainId, "cosmos.tx.v1beta1.Service/GetTxsEvent", k.cdc.MustMarshal(&req), sdk.NewInt(-1), types.ModuleName, "depositinterval", 0)
 	}
 
@@ -507,6 +508,7 @@ func AllBalancesCallback(k Keeper, ctx sdk.Context, args []byte, query icqtypes.
 	return k.SetAccountBalance(ctx, zone, balanceQuery.Address, args)
 }
 
+// coinFromRequestKey parses
 func coinFromRequestKey(query []byte, accAddr sdk.AccAddress) (sdk.Coin, error) {
 	idx := bytes.Index(query, accAddr)
 	if idx == -1 {

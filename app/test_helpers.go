@@ -43,7 +43,17 @@ func Setup(isCheckTx bool) *Quicksilver {
 	cmdcfg.SetBip44CoinType(config)
 
 	db := dbm.NewMemDB()
-	app := NewQuicksilver(log.NewNopLogger(), db, nil, true, map[int64]bool{}, DefaultNodeHome, 5, MakeEncodingConfig(), simapp.EmptyAppOptions{})
+	app := NewQuicksilver(
+		log.NewNopLogger(),
+		db,
+		nil,
+		true,
+		map[int64]bool{},
+		DefaultNodeHome,
+		5,
+		MakeEncodingConfig(),
+		simapp.EmptyAppOptions{},
+	)
 	if !isCheckTx {
 		// init chain must be called to stop deliverState from being nil
 		genesisState := NewDefaultGenesisState()
@@ -65,6 +75,12 @@ func Setup(isCheckTx bool) *Quicksilver {
 	}
 
 	return app
+}
+
+func GetAppWithContext(init bool) (*Quicksilver, sdk.Context) {
+	app := Setup(!init)
+	ctx := app.BaseApp.NewContext(false, tmproto.Header{Height: 1, ChainID: "mercury-1", Time: time.Now().UTC()})
+	return app, ctx
 }
 
 // SetupTestingApp initializes the IBC-go testing application

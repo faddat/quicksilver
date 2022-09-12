@@ -3,21 +3,23 @@ package keeper_test
 import (
 	"context"
 	"testing"
+	"time"
 
-	sdktypes "github.com/cosmos/cosmos-sdk/types"
-	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	ibctesting "github.com/cosmos/ibc-go/v3/testing"
 	"github.com/stretchr/testify/suite"
 
+	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
+
+	"github.com/ingenuity-build/quicksilver/app"
 	qapp "github.com/ingenuity-build/quicksilver/app"
 	"github.com/ingenuity-build/quicksilver/utils"
-	icqkeeper "github.com/ingenuity-build/quicksilver/x/interchainquery/keeper"
-	icqtypes "github.com/ingenuity-build/quicksilver/x/interchainquery/types"
+	"github.com/ingenuity-build/quicksilver/x/interchainstaking/keeper"
 	icskeeper "github.com/ingenuity-build/quicksilver/x/interchainstaking/keeper"
 	icstypes "github.com/ingenuity-build/quicksilver/x/interchainstaking/types"
 )
 
-var TestOwnerAddress = "cosmos17dtl0mjt3t77kpuhg2edqzjpszulwhgzuj9ljs"
+var TestOwnerAddress = "quick17dtl0mjt3t77kpuhg2edqzjpszulwhgzhk4dtz"
 
 func init() {
 	ibctesting.DefaultTestingAppInit = qapp.SetupTestingApp
@@ -76,33 +78,15 @@ func (s *KeeperTestSuite) SetupZones() {
 	s.Require().NoError(err)
 
 	// Simulate "cosmos.staking.v1beta1.Query/Validators" response
-	// - this is not working anymore;
-	qvr := stakingtypes.QueryValidatorsResponse{
-		Validators: s.GetQuicksilverApp(s.chainB).StakingKeeper.GetBondedValidatorsByPower(s.chainB.GetContext()),
-	}
-	icqmsgSrv := icqkeeper.NewMsgServerImpl(s.GetQuicksilverApp(s.chainA).InterchainQueryKeeper)
 
-	bondedQuery := stakingtypes.QueryValidatorsRequest{Status: stakingtypes.BondStatusBonded}
-	bz, err := s.GetQuicksilverApp(s.chainA).AppCodec().Marshal(&bondedQuery)
-	s.Require().NoError(err)
+	qApp := s.GetQuicksilverApp(s.chainA)
 
-	// proofOps is missing here
-	// we can no longer spoof a query/response for testing?
-	qmsg := icqtypes.MsgSubmitQueryResponse{
-		ChainId: s.chainB.ChainID,
-		QueryId: icqkeeper.GenerateQueryHash(
-			s.path.EndpointA.ConnectionID,
-			s.chainB.ChainID,
-			"cosmos.staking.v1beta1.Query/Validators",
-			bz,
-			icstypes.ModuleName,
-		),
-		Result:      s.GetQuicksilverApp(s.chainB).AppCodec().MustMarshal(&qvr),
-		Height:      s.chainB.CurrentHeader.Height,
-		FromAddress: TestOwnerAddress,
+	zone, found := qApp.InterchainstakingKeeper.GetZone(s.chainA.GetContext(), s.chainB.ChainID)
+	s.Require().True(found)
+
+	for _, val := range s.GetQuicksilverApp(s.chainB).StakingKeeper.GetBondedValidatorsByPower(s.chainB.GetContext()) {
+		s.Require().NoError(icskeeper.SetValidatorForZone(qApp.InterchainstakingKeeper, s.chainA.GetContext(), &zone, app.DefaultConfig().Codec.MustMarshal(&val)))
 	}
-	_, err = icqmsgSrv.SubmitQueryResponse(sdktypes.WrapSDKContext(ctx), &qmsg)
-	s.Require().NoError(err)
 
 	valsetInterval := uint64(s.GetQuicksilverApp(s.chainA).InterchainstakingKeeper.GetParam(ctx, icstypes.KeyValidatorSetInterval))
 	s.coordinator.CommitNBlocks(s.chainA, valsetInterval)
@@ -115,4 +99,12 @@ func newQuicksilverPath(chainA, chainB *ibctesting.TestChain) *ibctesting.Path {
 	path.EndpointB.ChannelConfig.PortID = ibctesting.TransferPort
 
 	return path
+}
+
+func GetICSKeeper() (*keeper.Keeper, sdk.Context) {
+	app := qapp.Setup(false)
+	icskeeper := app.InterchainstakingKeeper
+	ctx := app.BaseApp.NewContext(false, tmproto.Header{Height: 1, ChainID: "mercury-1", Time: time.Now().UTC()})
+
+	return &icskeeper, ctx
 }

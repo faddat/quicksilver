@@ -35,7 +35,7 @@ func (k Keeper) AfterEpochEnd(ctx sdk.Context, epochIdentifier string, epochNumb
 			)
 
 			k.Logger(ctx).Info("taking a snapshot of intents")
-			err := k.AggregateIntents(ctx, zoneInfo)
+			err := k.AggregateIntents(ctx, &zoneInfo)
 			if err != nil {
 				k.Logger(ctx).Error("encountered a problem aggregating intents; leaving aggregated intents unchanged since last epoch", "error", err.Error())
 			}
@@ -46,46 +46,45 @@ func (k Keeper) AfterEpochEnd(ctx sdk.Context, epochIdentifier string, epochNumb
 			}
 
 			// OnChanOpenAck calls SetWithdrawalAddress (see ibc_module.go)
-			for _, da := range zoneInfo.GetDelegationAccounts() {
-				k.Logger(ctx).Info("Withdrawing rewards")
+			da := zoneInfo.DelegationAddress
+			k.Logger(ctx).Info("Withdrawing rewards")
 
-				delegationQuery := stakingtypes.QueryDelegatorDelegationsRequest{DelegatorAddr: da.Address}
-				bz := k.cdc.MustMarshal(&delegationQuery)
+			delegationQuery := stakingtypes.QueryDelegatorDelegationsRequest{DelegatorAddr: da.Address}
+			bz = k.cdc.MustMarshal(&delegationQuery)
 
-				k.ICQKeeper.MakeRequest(
-					ctx,
-					zoneInfo.ConnectionId,
-					zoneInfo.ChainId,
-					"cosmos.staking.v1beta1.Query/DelegatorDelegations",
-					bz,
-					sdk.NewInt(-1),
-					types.ModuleName,
-					"delegations",
-					0,
-				)
-				da.IncrementBalanceWaitgroup()
+			k.ICQKeeper.MakeRequest(
+				ctx,
+				zoneInfo.ConnectionId,
+				zoneInfo.ChainId,
+				"cosmos.staking.v1beta1.Query/DelegatorDelegations",
+				bz,
+				sdk.NewInt(-1),
+				types.ModuleName,
+				"delegations",
+				0,
+			)
+			da.IncrementBalanceWaitgroup()
 
-				rewardsQuery := distrtypes.QueryDelegationTotalRewardsRequest{DelegatorAddress: da.Address}
-				bz = k.cdc.MustMarshal(&rewardsQuery)
+			rewardsQuery := distrtypes.QueryDelegationTotalRewardsRequest{DelegatorAddress: da.Address}
+			bz = k.cdc.MustMarshal(&rewardsQuery)
 
-				k.ICQKeeper.MakeRequest(
-					ctx,
-					zoneInfo.ConnectionId,
-					zoneInfo.ChainId,
-					"cosmos.distribution.v1beta1.Query/DelegationTotalRewards",
-					bz,
-					sdk.NewInt(-1),
-					types.ModuleName,
-					"rewards",
-					0,
-				)
+			k.ICQKeeper.MakeRequest(
+				ctx,
+				zoneInfo.ConnectionId,
+				zoneInfo.ChainId,
+				"cosmos.distribution.v1beta1.Query/DelegationTotalRewards",
+				bz,
+				sdk.NewInt(-1),
+				types.ModuleName,
+				"rewards",
+				0,
+			)
 
-				// increment the WithdrawalWaitgroup
-				// this allows us to track the response for every protocol delegator
-				// WithdrawalWaitgroup is decremented in RewardsCallback
-				zoneInfo.WithdrawalWaitgroup++
-				k.Logger(ctx).Info("Incrementing waitgroup for delegation", "value", zoneInfo.WithdrawalWaitgroup)
-			}
+			// increment the WithdrawalWaitgroup
+			// this allows us to track the response for every protocol delegator
+			// WithdrawalWaitgroup is decremented in RewardsCallback
+			zoneInfo.WithdrawalWaitgroup++
+			k.Logger(ctx).Info("Incrementing waitgroup for delegation", "value", zoneInfo.WithdrawalWaitgroup)
 			k.SetZone(ctx, &zoneInfo)
 
 			return false

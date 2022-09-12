@@ -14,12 +14,7 @@ func (z Zone) SupportMultiSend() bool { return z.MultiSend }
 func (z Zone) SupportLsm() bool       { return z.LiquidityModule }
 
 func (z Zone) IsDelegateAddress(addr string) bool {
-	for _, acc := range z.DelegationAddresses {
-		if acc.Address == addr {
-			return true
-		}
-	}
-	return false
+	return z.DelegationAddress.Address == addr
 }
 
 func (z *Zone) GetValidatorByValoper(valoper string) (*Validator, bool) {
@@ -31,16 +26,11 @@ func (z *Zone) GetValidatorByValoper(valoper string) (*Validator, bool) {
 	return nil, false
 }
 
-func (z *Zone) GetDelegationAccountByAddress(address string) (*ICAAccount, error) {
-	if z.DelegationAddresses == nil {
-		return nil, fmt.Errorf("no delegation accounts set: %v", z)
+func (z *Zone) GetDelegationAccount() (*ICAAccount, error) {
+	if z.DelegationAddress == nil {
+		return nil, fmt.Errorf("no delegation account set: %v", z)
 	}
-	for _, account := range z.DelegationAddresses {
-		if account.GetAddress() == address {
-			return account, nil
-		}
-	}
-	return nil, fmt.Errorf("unable to find delegation account: %s", address)
+	return z.DelegationAddress, nil
 }
 
 func (z *Zone) ValidateCoinsForZone(ctx sdk.Context, coins sdk.Coins) error {
@@ -67,9 +57,7 @@ COINS:
 // this method exist to make testing easier!
 func (z *Zone) UpdateIntentWithCoins(intent DelegatorIntent, multiplier sdk.Dec, inAmount sdk.Coins) DelegatorIntent {
 	// coinIntent is ordinal
-	fmt.Println("YO", intent, inAmount)
 	intent = intent.AddOrdinal(multiplier, z.ConvertCoinsToOrdinalIntents(inAmount))
-	fmt.Println("YO", intent)
 	return intent
 }
 
@@ -167,14 +155,6 @@ func (z Zone) GetValidatorsAddressesAsSlice() []string {
 	sort.Strings(l)
 
 	return l
-}
-
-func (z *Zone) GetDelegationAccounts() []*ICAAccount {
-	delegationAccounts := z.DelegationAddresses
-	sort.Slice(delegationAccounts, func(i, j int) bool {
-		return delegationAccounts[i].Address < delegationAccounts[j].Address
-	})
-	return delegationAccounts
 }
 
 func (z *Zone) GetAggregateIntentOrDefault() ValidatorIntents {

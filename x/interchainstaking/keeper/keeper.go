@@ -187,7 +187,7 @@ func SetValidatorsForZone(k Keeper, ctx sdk.Context, zoneInfo types.Zone, data [
 	return nil
 }
 
-func SetValidatorForZone(k Keeper, ctx sdk.Context, zoneInfo types.Zone, data []byte) error {
+func SetValidatorForZone(k Keeper, ctx sdk.Context, zoneInfo *types.Zone, data []byte) error {
 	validator := stakingTypes.Validator{}
 	if bytes.Equal(data, []byte("")) {
 		return fmt.Errorf("attempted to unmarshal zero length byte slice (9)")
@@ -229,7 +229,7 @@ func SetValidatorForZone(k Keeper, ctx sdk.Context, zoneInfo types.Zone, data []
 		}
 	}
 
-	k.SetZone(ctx, &zoneInfo)
+	k.SetZone(ctx, zoneInfo)
 	return nil
 }
 

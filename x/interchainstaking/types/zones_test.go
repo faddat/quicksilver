@@ -317,10 +317,10 @@ func TestUpdateIntentWithCoins(t *testing.T) {
 func intentFromDecSlice(in map[string]sdk.Dec) types.DelegatorIntent {
 	out := types.DelegatorIntent{
 		Delegator: utils.GenerateAccAddressForTest().String(),
-		Intents:   make([]*types.ValidatorIntent, 0),
+		Intents:   map[string]*types.ValidatorIntent{},
 	}
 	for addr, weight := range in {
-		out.Intents = append(out.Intents, &types.ValidatorIntent{addr, weight})
+		out.Intents[addr] = &types.ValidatorIntent{addr, weight}
 	}
 	return out
 }

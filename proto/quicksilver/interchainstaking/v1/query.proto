@@ -54,14 +54,6 @@ service Query {
         "validator_delegations/{validator_address}";
   }
 
-  // DelegationPlans provides data on the delegations to a given validator for
-  // the given zone.
-  rpc DelegationPlans(QueryDelegationPlansRequest)
-      returns (QueryDelegationPlansResponse) {
-    option (google.api.http).get =
-        "/quicksilver/interchainstaking/v1/zones/{chain_id}/delegation_plans";
-  }
-
   // WithdrawalRecords provides data on the active withdrawals.
   rpc ZoneWithdrawalRecords(QueryWithdrawalRecordsRequest)
       returns (QueryWithdrawalRecordsResponse) {
@@ -138,16 +130,6 @@ message QueryValidatorDelegationsRequest {
 
 message QueryValidatorDelegationsResponse {
   repeated Delegation delegations = 1 [ (gogoproto.nullable) = false ];
-  cosmos.base.query.v1beta1.PageResponse pagination = 2;
-}
-
-message QueryDelegationPlansRequest {
-  string chain_id = 1 [ (gogoproto.moretags) = "yaml:\"chain_id\"" ];
-  cosmos.base.query.v1beta1.PageRequest pagination = 2;
-}
-
-message QueryDelegationPlansResponse {
-  repeated DelegationPlan delegations = 1 [ (gogoproto.nullable) = false ];
   cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }
 

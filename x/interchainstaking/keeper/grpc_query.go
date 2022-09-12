@@ -80,7 +80,7 @@ func (k Keeper) DelegatorIntent(c context.Context, req *types.QueryDelegatorInte
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("no zone found matching %s", req.GetChainId()))
 	}
 
-	intent, found := k.GetIntent(ctx, zone, req.DelegatorAddress, false)
+	intent, found := k.GetIntent(ctx, &zone, req.DelegatorAddress, false)
 	if !found {
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("no delegation intent specified for %s", req.GetChainId()))
 	}
@@ -139,23 +139,6 @@ func (k Keeper) ValidatorDelegations(c context.Context, req *types.QueryValidato
 	delegations := k.GetValidatorDelegations(ctx, &zone, valAddr)
 
 	return &types.QueryValidatorDelegationsResponse{Delegations: delegations}, nil
-}
-
-func (k Keeper) DelegationPlans(c context.Context, req *types.QueryDelegationPlansRequest) (*types.QueryDelegationPlansResponse, error) {
-	if req == nil {
-		return nil, status.Error(codes.InvalidArgument, "empty request")
-	}
-
-	ctx := sdk.UnwrapSDKContext(c)
-
-	zone, found := k.GetZone(ctx, req.GetChainId())
-	if !found {
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("no zone found matching %s", req.GetChainId()))
-	}
-
-	delegationplans := k.GetAllDelegationPlans(ctx, &zone)
-
-	return &types.QueryDelegationPlansResponse{Delegations: delegationplans}, nil
 }
 
 func (k Keeper) ZoneWithdrawalRecords(c context.Context, req *types.QueryWithdrawalRecordsRequest) (*types.QueryWithdrawalRecordsResponse, error) {
