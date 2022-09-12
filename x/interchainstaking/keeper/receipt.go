@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -27,6 +28,8 @@ func (k Keeper) HandleReceiptTransaction(ctx sdk.Context, txr *sdk.TxResponse, t
 	senderAddress := UNSET
 	coins := sdk.Coins{}
 
+	k.Logger(ctx).Error("txr.Events", "events", txr.Events)
+
 	for _, event := range txr.Events {
 		if event.Type == "transfer" {
 			attrs := attributesToMap(event.Attributes)
@@ -41,7 +44,7 @@ func (k Keeper) HandleReceiptTransaction(ctx sdk.Context, txr *sdk.TxResponse, t
 					k.Logger(ctx).Error("sender mismatch", "expected", senderAddress, "received", sender)
 				}
 
-				k.Logger(ctx).Info("Deposit receipt", "deposit_address", zone.DepositAddress.GetAddress(), "sender", sender, "amount", amount)
+				k.Logger(ctx).Error("Deposit receipt", "deposit_address", zone.DepositAddress.GetAddress(), "sender", sender, "amount", amount)
 				thisCoins, err := sdk.ParseCoinsNormalized(amount)
 				if err != nil {
 					k.Logger(ctx).Error("unable to parse coin", "string", amount)
@@ -106,7 +109,7 @@ func (k *Keeper) MintQAsset(ctx sdk.Context, sender sdk.AccAddress, zone types.Z
 	}
 
 	outCoins := sdk.Coins{}
-	for _, inCoin := range inCoins {
+	for _, inCoin := range inCoins.Sort() {
 		outAmount := inCoin.Amount.ToDec().Quo(zone.RedemptionRate).TruncateInt()
 		outCoin := sdk.NewCoin(zone.LocalDenom, outAmount)
 		outCoins = outCoins.Add(outCoin)
@@ -161,7 +164,7 @@ func (k *Keeper) SubmitTx(ctx sdk.Context, msgs []sdk.Msg, account *types.ICAAcc
 
 	// timeoutTimestamp set to max value with the unsigned bit shifted to satisfy hermes timestamp conversion
 	// it is the responsibility of the auth module developer to ensure an appropriate timeout timestamp
-	timeoutTimestamp := ^uint64(0) >> 1
+	timeoutTimestamp := uint64(ctx.BlockTime().UnixNano()) + uint64(24*time.Hour.Nanoseconds())
 	_, err = k.ICAControllerKeeper.SendTx(ctx, chanCap, connectionID, portID, packetData, timeoutTimestamp)
 	if err != nil {
 		return err

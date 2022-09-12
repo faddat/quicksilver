@@ -352,6 +352,8 @@ func (k *Keeper) handleSendToDelegate(ctx sdk.Context, zone *types.Zone, msg *ba
 		}
 	}
 
+	k.Logger(ctx).Error("messages to send", "messages", msgs)
+
 	zone.DelegationAddress.Balance = zone.DelegationAddress.Balance.Add(msg.Amount...)
 	return k.SubmitTx(ctx, msgs, zone.DelegationAddress, memo)
 }

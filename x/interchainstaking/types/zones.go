@@ -8,6 +8,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
+	"github.com/ingenuity-build/quicksilver/utils"
 )
 
 func (z Zone) SupportMultiSend() bool { return z.MultiSend }
@@ -37,7 +38,7 @@ func (z *Zone) ValidateCoinsForZone(ctx sdk.Context, coins sdk.Coins) error {
 	zoneVals := z.GetValidatorsAddressesAsSlice()
 
 COINS:
-	for _, coin := range coins {
+	for _, coin := range coins.Sort() {
 		if coin.Denom == z.BaseDenom {
 			continue
 		}
@@ -70,7 +71,7 @@ func (z *Zone) UpdateIntentWithMemo(intent DelegatorIntent, memo string, multipl
 	}
 
 	intent = intent.AddOrdinal(multiplier, memoIntent)
-
+	fmt.Println("ERROR: ordinalfrommemo", intent)
 	return intent, nil
 }
 
@@ -94,6 +95,7 @@ COINS:
 		}
 	}
 
+	fmt.Println("ERROR: ordinalfromcoins", out)
 	return out
 }
 
@@ -140,7 +142,7 @@ func (z *Zone) ConvertMemoToOrdinalIntents(coins sdk.Coins, memo string) (Valida
 }
 
 func (z *Zone) GetValidatorsSorted() []*Validator {
-	sort.Slice(z.Validators, func(i, j int) bool {
+	sort.SliceStable(z.Validators, func(i, j int) bool {
 		return z.Validators[i].ValoperAddress < z.Validators[j].ValoperAddress
 	})
 	return z.Validators
@@ -176,7 +178,7 @@ func (z *Zone) DefaultAggregateIntents() ValidatorIntents {
 	valCount := sdk.NewInt(int64(len(out)))
 
 	// normalise the array (divide everything by length of intent list)
-	for _, key := range out.Keys() {
+	for _, key := range utils.Keys(out) {
 		if val, ok := out[key]; ok {
 			val.Weight = val.Weight.Quo(sdk.NewDecFromInt(valCount))
 			out[key] = val

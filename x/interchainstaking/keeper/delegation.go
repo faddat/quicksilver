@@ -153,7 +153,10 @@ func (k *Keeper) PrepareDelegationMessagesForShares(ctx sdk.Context, zone *types
 func (k Keeper) DeterminePlanForDelegation(ctx sdk.Context, zone *types.Zone, amount sdk.Coins) map[string]sdk.Int {
 	currentAllocations, currentSum := k.GetDelegationMap(ctx, zone)
 	targetAllocations := zone.GetAggregateIntentOrDefault()
-	return determineAllocationsForDelegation(currentAllocations, currentSum, targetAllocations, amount)
+	k.Logger(ctx).Error("aggregateIntent", "agg", targetAllocations)
+	allocations := determineAllocationsForDelegation(currentAllocations, currentSum, targetAllocations, amount)
+	k.Logger(ctx).Error("allocations", "all", allocations)
+	return allocations
 }
 
 // CalculateDeltas determines, for the current delegations, in delta between actual allocations and the target intent.

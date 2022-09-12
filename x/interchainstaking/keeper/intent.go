@@ -148,6 +148,8 @@ func (k *Keeper) AggregateIntents(ctx sdk.Context, zone *types.Zone) error {
 		aggregate[key].Weight = aggregate[key].Weight.Quo(ordinalizedIntentSum)
 	}
 
+	k.Logger(ctx).Error("aggregates", "agg", aggregate)
+
 	zone.AggregateIntent = aggregate
 	k.SetZone(ctx, zone)
 	return nil
@@ -168,13 +170,13 @@ func (k *Keeper) UpdateIntent(ctx sdk.Context, sender sdk.AccAddress, zone *type
 		intent = zone.UpdateIntentWithCoins(intent, baseBalance, inAmount)
 	}
 
-	if len(memo) > 0 {
-		var err error
-		intent, err = zone.UpdateIntentWithMemo(intent, memo, baseBalance, inAmount)
-		if err != nil {
-			return err
-		}
-	}
+	// if len(memo) > 0 {
+	// 	var err error
+	// 	intent, err = zone.UpdateIntentWithMemo(intent, memo, baseBalance, inAmount)
+	// 	if err != nil {
+	// 		return err
+	// 	}
+	// }
 
 	if len(intent.Intents) == 0 {
 		return nil
