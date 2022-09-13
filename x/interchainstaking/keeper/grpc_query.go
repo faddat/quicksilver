@@ -99,12 +99,20 @@ func (k Keeper) Delegations(c context.Context, req *types.QueryDelegationsReques
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("no zone found matching %s", req.GetChainId()))
 	}
 
-	delegations := k.GetAllDelegations(ctx, &zone)
+	delegations := make([]types.Delegation, 0)
+	var sum int64 = 0
 
-	return &types.QueryDelegationsResponse{Delegations: delegations}, nil
+	k.IterateAllDelegations(ctx, &zone, func(delegation types.Delegation) (stop bool) {
+		delegations = append(delegations, delegation)
+		sum += delegation.Amount.Amount.Int64()
+		return false
+	})
+
+	return &types.QueryDelegationsResponse{Delegations: delegations, Tvl: sum}, nil
 }
 
 func (k Keeper) ZoneWithdrawalRecords(c context.Context, req *types.QueryWithdrawalRecordsRequest) (*types.QueryWithdrawalRecordsResponse, error) {
+	// TODO: implement pagination
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}
@@ -116,12 +124,19 @@ func (k Keeper) ZoneWithdrawalRecords(c context.Context, req *types.QueryWithdra
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("no zone found matching %s", req.GetChainId()))
 	}
 
-	withdrawalrecords := k.AllZoneWithdrawalRecords(ctx, &zone)
+	withdrawalrecords := make([]types.WithdrawalRecord, 0)
+	k.IterateZoneWithdrawalRecords(ctx, &zone, func(index int64, record types.WithdrawalRecord) (stop bool) {
+		if record.Delegator == req.DelegatorAddress {
+			withdrawalrecords = append(withdrawalrecords, record)
+		}
+		return false
+	})
 
 	return &types.QueryWithdrawalRecordsResponse{Withdrawals: withdrawalrecords}, nil
 }
 
 func (k Keeper) WithdrawalRecords(c context.Context, req *types.QueryWithdrawalRecordsRequest) (*types.QueryWithdrawalRecordsResponse, error) {
+	// TODO: implement pagination
 	if req == nil {
 		return nil, status.Error(codes.InvalidArgument, "empty request")
 	}

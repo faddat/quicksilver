@@ -322,6 +322,11 @@ func (k Keeper) EmitPerformanceBalanceQuery(ctx sdk.Context, zone *types.Zone) e
 
 // redemption rate
 
+func (k *Keeper) assertRedemptionRateWithinBounds(ctx sdk.Context, previousRate sdk.Dec, newRate sdk.Dec) error {
+	// TODO: what is an acceptable deviation?
+	return nil
+}
+
 func (k *Keeper) updateRedemptionRate(ctx sdk.Context, zone types.Zone, epochRewards sdk.Int) {
 	ratio := k.getRatio(ctx, zone, epochRewards)
 	k.Logger(ctx).Info("Epochly rewards", "coins", epochRewards)
@@ -329,6 +334,9 @@ func (k *Keeper) updateRedemptionRate(ctx sdk.Context, zone types.Zone, epochRew
 	k.Logger(ctx).Info("Current redemption rate", "rate", zone.RedemptionRate)
 	k.Logger(ctx).Info("New redemption rate", "rate", ratio, "supply", k.BankKeeper.GetSupply(ctx, zone.LocalDenom).Amount.ToDec(), "lv", k.GetDelegatedAmount(ctx, &zone).Amount.Add(epochRewards).ToDec())
 
+	if err := k.assertRedemptionRateWithinBounds(ctx, zone.RedemptionRate, ratio); err != nil {
+		panic("Redemption rate out of bounds")
+	}
 	zone.LastRedemptionRate = zone.RedemptionRate
 	zone.RedemptionRate = ratio
 	k.SetZone(ctx, &zone)
@@ -348,4 +356,8 @@ func (k *Keeper) getRatio(ctx sdk.Context, zone types.Zone, epochRewards sdk.Int
 	}
 
 	return naAmount.Add(epochRewards).ToDec().Quo(qaAmount.ToDec())
+}
+
+func (k *Keeper) Rebalance(ctx sdk.Context, zone types.Zone) error {
+	// TODO: rebalance
 }
