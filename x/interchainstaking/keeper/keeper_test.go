@@ -12,9 +12,7 @@ import (
 	tmproto "github.com/tendermint/tendermint/proto/tendermint/types"
 
 	"github.com/ingenuity-build/quicksilver/app"
-	qapp "github.com/ingenuity-build/quicksilver/app"
 	"github.com/ingenuity-build/quicksilver/utils"
-	"github.com/ingenuity-build/quicksilver/x/interchainstaking/keeper"
 	icskeeper "github.com/ingenuity-build/quicksilver/x/interchainstaking/keeper"
 	icstypes "github.com/ingenuity-build/quicksilver/x/interchainstaking/types"
 )
@@ -22,7 +20,7 @@ import (
 var TestOwnerAddress = "quick17dtl0mjt3t77kpuhg2edqzjpszulwhgzhk4dtz"
 
 func init() {
-	ibctesting.DefaultTestingAppInit = qapp.SetupTestingApp
+	ibctesting.DefaultTestingAppInit = app.SetupTestingApp
 }
 
 func TestKeeperTestSuite(t *testing.T) {
@@ -39,8 +37,8 @@ type KeeperTestSuite struct {
 	path   *ibctesting.Path
 }
 
-func (s *KeeperTestSuite) GetQuicksilverApp(chain *ibctesting.TestChain) *qapp.Quicksilver {
-	app, ok := chain.App.(*qapp.Quicksilver)
+func (s *KeeperTestSuite) GetQuicksilverApp(chain *ibctesting.TestChain) *app.Quicksilver {
+	app, ok := chain.App.(*app.Quicksilver)
 	if !ok {
 		panic("not Quicksilver app")
 	}
@@ -81,11 +79,11 @@ func (s *KeeperTestSuite) SetupZones() {
 
 	qApp := s.GetQuicksilverApp(s.chainA)
 
-	zone, found := qApp.InterchainstakingKeeper.GetZone(s.chainA.GetContext(), s.chainB.ChainID)
-	s.Require().True(found)
-
 	for _, val := range s.GetQuicksilverApp(s.chainB).StakingKeeper.GetBondedValidatorsByPower(s.chainB.GetContext()) {
-		s.Require().NoError(icskeeper.SetValidatorForZone(qApp.InterchainstakingKeeper, s.chainA.GetContext(), &zone, app.DefaultConfig().Codec.MustMarshal(&val)))
+		// refetch the zone for each validator, else we end up with an empty valset each time!
+		zone, found := qApp.InterchainstakingKeeper.GetZone(s.chainA.GetContext(), s.chainB.ChainID)
+		s.Require().True(found)
+		s.Require().NoError(icskeeper.SetValidatorForZone(&qApp.InterchainstakingKeeper, s.chainA.GetContext(), zone, app.DefaultConfig().Codec.MustMarshal(&val)))
 	}
 
 	valsetInterval := uint64(s.GetQuicksilverApp(s.chainA).InterchainstakingKeeper.GetParam(ctx, icstypes.KeyValidatorSetInterval))
@@ -101,10 +99,10 @@ func newQuicksilverPath(chainA, chainB *ibctesting.TestChain) *ibctesting.Path {
 	return path
 }
 
-func GetICSKeeper() (*keeper.Keeper, sdk.Context) {
-	app := qapp.Setup(false)
-	icskeeper := app.InterchainstakingKeeper
+func GetICSKeeper() (*icskeeper.Keeper, sdk.Context) {
+	app := app.Setup(false)
+	keeper := app.InterchainstakingKeeper
 	ctx := app.BaseApp.NewContext(false, tmproto.Header{Height: 1, ChainID: "mercury-1", Time: time.Now().UTC()})
 
-	return &icskeeper, ctx
+	return &keeper, ctx
 }

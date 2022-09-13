@@ -1,4 +1,4 @@
-package keeper
+package keeper_test
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ingenuity-build/quicksilver/utils"
+	icskeeper "github.com/ingenuity-build/quicksilver/x/interchainstaking/keeper"
 	"github.com/ingenuity-build/quicksilver/x/interchainstaking/types"
 	"github.com/stretchr/testify/require"
 )
@@ -43,10 +44,9 @@ func TestDetermineAllocations(t *testing.T) {
 			inAmount: sdk.NewCoins(sdk.NewCoin("uqck", sdk.NewInt(50000))),
 			expected: map[string]sdk.Int{
 				val1.String(): sdk.ZeroInt(),
-				val2.String(): sdk.NewInt(33181),
+				val2.String(): sdk.NewInt(33182),
 				val3.String(): sdk.NewInt(16818),
 			},
-			dust: sdk.OneInt(),
 		},
 		{
 			current: map[string]sdk.Int{
@@ -69,7 +69,6 @@ func TestDetermineAllocations(t *testing.T) {
 				val2.String(): sdk.NewInt(6),
 				val1.String(): sdk.NewInt(3),
 			},
-			dust: sdk.ZeroInt(),
 		},
 		{
 			current: map[string]sdk.Int{
@@ -92,7 +91,6 @@ func TestDetermineAllocations(t *testing.T) {
 				val1.String(): sdk.NewInt(10),
 				val3.String(): sdk.NewInt(7),
 			},
-			dust: sdk.NewInt(2),
 		},
 
 		// test to check for div-by-zero when no existing allocations exist.
@@ -112,17 +110,11 @@ func TestDetermineAllocations(t *testing.T) {
 				val1.String(): sdk.NewInt(12),
 				val3.String(): sdk.NewInt(12),
 			},
-			dust: sdk.NewInt(2),
 		},
 	}
 
 	for caseNumber, val := range tc {
-		allocations := determineAllocationsForDelegation(val.current, val.sum, val.target, val.inAmount)
-		// as per the comment above, allocate the dust to the expected output of the first validator alphabetically.
-		// no dust? short-circuit!
-		dustVal := utils.Keys(val.target)[0]
-		val.expected[dustVal] = val.expected[dustVal].Add(val.dust)
-
+		allocations := icskeeper.DetermineAllocationsForDelegation(val.current, val.sum, val.target, val.inAmount)
 		require.Equal(t, len(val.expected), len(allocations))
 		for valoper := range val.expected {
 			ex, ok := val.expected[valoper]
@@ -131,5 +123,129 @@ func TestDetermineAllocations(t *testing.T) {
 			require.True(t, ok)
 			require.True(t, ex.Equal(ac), fmt.Sprintf("Test Case #%d failed; allocations did not equal expected output - expected %s, got %s.", caseNumber, val.expected[valoper], allocations[valoper]))
 		}
+	}
+}
+
+type delegationUpdate struct {
+	delegation types.Delegation
+	absolute   bool
+}
+
+func (s *KeeperTestSuite) TestUpdateDelegation() {
+	del1 := utils.GenerateAccAddressForTest()
+
+	val1 := utils.GenerateValAddressForTest()
+	val2 := utils.GenerateValAddressForTest()
+	val3 := utils.GenerateValAddressForTest()
+	val4 := utils.GenerateValAddressForTest()
+	val5 := utils.GenerateValAddressForTest()
+	val6 := utils.GenerateValAddressForTest()
+
+	tests := []struct {
+		name       string
+		delegation *types.Delegation
+		updates    []delegationUpdate
+		expected   types.Delegation
+	}{
+		{
+			"single update, relative increase +3000",
+			&types.Delegation{DelegationAddress: del1.String(), ValidatorAddress: val1.String(), Amount: sdk.NewCoin("denom", sdk.NewInt(3000))},
+			[]delegationUpdate{
+				{
+					delegation: types.Delegation{DelegationAddress: del1.String(), ValidatorAddress: val1.String(), Amount: sdk.NewCoin("denom", sdk.NewInt(3000))},
+					absolute:   false,
+				},
+			},
+			types.Delegation{DelegationAddress: del1.String(), ValidatorAddress: val1.String(), Amount: sdk.NewCoin("denom", sdk.NewInt(6000))},
+		},
+		{
+			"single update, relative increase +3000",
+			&types.Delegation{DelegationAddress: del1.String(), ValidatorAddress: val2.String(), Amount: sdk.NewCoin("denom", sdk.NewInt(3000))},
+			[]delegationUpdate{
+				{
+					delegation: types.Delegation{DelegationAddress: del1.String(), ValidatorAddress: val2.String(), Amount: sdk.NewCoin("denom", sdk.NewInt(3000))},
+					absolute:   true,
+				},
+			},
+			types.Delegation{DelegationAddress: del1.String(), ValidatorAddress: val2.String(), Amount: sdk.NewCoin("denom", sdk.NewInt(3000))},
+		},
+		{
+			"multi update, relative increase +3000, +2000",
+			&types.Delegation{DelegationAddress: del1.String(), ValidatorAddress: val3.String(), Amount: sdk.NewCoin("denom", sdk.NewInt(3000))},
+			[]delegationUpdate{
+				{
+					delegation: types.Delegation{DelegationAddress: del1.String(), ValidatorAddress: val3.String(), Amount: sdk.NewCoin("denom", sdk.NewInt(3000))},
+					absolute:   false,
+				},
+				{
+					delegation: types.Delegation{DelegationAddress: del1.String(), ValidatorAddress: val3.String(), Amount: sdk.NewCoin("denom", sdk.NewInt(2000))},
+					absolute:   false,
+				},
+			},
+			types.Delegation{DelegationAddress: del1.String(), ValidatorAddress: val3.String(), Amount: sdk.NewCoin("denom", sdk.NewInt(8000))},
+		},
+		{
+			"multi update, relative +3000, absolute +2000",
+			&types.Delegation{DelegationAddress: del1.String(), ValidatorAddress: val4.String(), Amount: sdk.NewCoin("denom", sdk.NewInt(3000))},
+			[]delegationUpdate{
+				{
+					delegation: types.Delegation{DelegationAddress: del1.String(), ValidatorAddress: val4.String(), Amount: sdk.NewCoin("denom", sdk.NewInt(3000))},
+					absolute:   false,
+				},
+				{
+					delegation: types.Delegation{DelegationAddress: del1.String(), ValidatorAddress: val4.String(), Amount: sdk.NewCoin("denom", sdk.NewInt(2000))},
+					absolute:   true,
+				},
+			},
+			types.Delegation{DelegationAddress: del1.String(), ValidatorAddress: val4.String(), Amount: sdk.NewCoin("denom", sdk.NewInt(2000))},
+		},
+		{
+			"new delegation, relative increase +10000",
+			nil,
+			[]delegationUpdate{
+				{
+					delegation: types.Delegation{DelegationAddress: del1.String(), ValidatorAddress: val5.String(), Amount: sdk.NewCoin("denom", sdk.NewInt(10000))},
+					absolute:   false,
+				},
+			},
+			types.Delegation{DelegationAddress: del1.String(), ValidatorAddress: val5.String(), Amount: sdk.NewCoin("denom", sdk.NewInt(10000))},
+		},
+		{
+			"new delegation, absolute increase +15000",
+			nil,
+			[]delegationUpdate{
+				{
+					delegation: types.Delegation{DelegationAddress: del1.String(), ValidatorAddress: val6.String(), Amount: sdk.NewCoin("denom", sdk.NewInt(15000))},
+					absolute:   true,
+				},
+			},
+			types.Delegation{DelegationAddress: del1.String(), ValidatorAddress: val6.String(), Amount: sdk.NewCoin("denom", sdk.NewInt(15000))},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+
+		s.Run(tt.name, func() {
+			s.SetupTest()
+			s.SetupZones()
+
+			app := s.GetQuicksilverApp(s.chainA)
+			ctx := s.chainA.GetContext()
+			zone, found := app.InterchainstakingKeeper.GetZone(ctx, s.chainB.ChainID)
+			s.Require().True(found)
+
+			if tt.delegation != nil {
+				app.InterchainstakingKeeper.SetDelegation(ctx, &zone, *tt.delegation)
+			}
+
+			for _, update := range tt.updates {
+				app.InterchainstakingKeeper.UpdateDelegationRecordForAddress(ctx, update.delegation.DelegationAddress, update.delegation.ValidatorAddress, update.delegation.Amount, &zone, update.absolute)
+			}
+
+			actual, found := app.InterchainstakingKeeper.GetDelegation(ctx, &zone, tt.expected.DelegationAddress, tt.expected.ValidatorAddress)
+			s.Require().True(found)
+			s.Require().Equal(tt.expected, actual)
+		})
 	}
 }

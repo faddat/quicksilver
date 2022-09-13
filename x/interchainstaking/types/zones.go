@@ -71,7 +71,6 @@ func (z *Zone) UpdateIntentWithMemo(intent DelegatorIntent, memo string, multipl
 	}
 
 	intent = intent.AddOrdinal(multiplier, memoIntent)
-	fmt.Println("ERROR: ordinalfrommemo", intent)
 	return intent, nil
 }
 
@@ -95,7 +94,6 @@ COINS:
 		}
 	}
 
-	fmt.Println("ERROR: ordinalfromcoins", out)
 	return out
 }
 

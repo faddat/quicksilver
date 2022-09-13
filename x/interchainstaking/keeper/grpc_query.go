@@ -6,7 +6,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/store/prefix"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cosmos/cosmos-sdk/types/bech32"
 	"github.com/cosmos/cosmos-sdk/types/query"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -80,7 +79,7 @@ func (k Keeper) DelegatorIntent(c context.Context, req *types.QueryDelegatorInte
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("no zone found matching %s", req.GetChainId()))
 	}
 
-	intent, found := k.GetIntent(ctx, &zone, req.DelegatorAddress, false)
+	intent, found := k.GetIntent(ctx, zone, req.DelegatorAddress, false)
 	if !found {
 		return nil, status.Error(codes.NotFound, fmt.Sprintf("no delegation intent specified for %s", req.GetChainId()))
 	}
@@ -103,42 +102,6 @@ func (k Keeper) Delegations(c context.Context, req *types.QueryDelegationsReques
 	delegations := k.GetAllDelegations(ctx, &zone)
 
 	return &types.QueryDelegationsResponse{Delegations: delegations}, nil
-}
-
-func (k Keeper) DelegatorDelegations(c context.Context, req *types.QueryDelegatorDelegationsRequest) (*types.QueryDelegatorDelegationsResponse, error) {
-	if req == nil {
-		return nil, status.Error(codes.InvalidArgument, "empty request")
-	}
-
-	ctx := sdk.UnwrapSDKContext(c)
-
-	zone, found := k.GetZone(ctx, req.GetChainId())
-	if !found {
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("no zone found matching %s", req.GetChainId()))
-	}
-
-	_, addr, _ := bech32.DecodeAndConvert(req.DelegatorAddress)
-	delegations := k.GetDelegatorDelegations(ctx, &zone, addr)
-
-	return &types.QueryDelegatorDelegationsResponse{Delegations: delegations}, nil
-}
-
-func (k Keeper) ValidatorDelegations(c context.Context, req *types.QueryValidatorDelegationsRequest) (*types.QueryValidatorDelegationsResponse, error) {
-	if req == nil {
-		return nil, status.Error(codes.InvalidArgument, "empty request")
-	}
-
-	ctx := sdk.UnwrapSDKContext(c)
-
-	zone, found := k.GetZone(ctx, req.GetChainId())
-	if !found {
-		return nil, status.Error(codes.NotFound, fmt.Sprintf("no zone found matching %s", req.GetChainId()))
-	}
-
-	_, valAddr, _ := bech32.DecodeAndConvert(req.ValidatorAddress)
-	delegations := k.GetValidatorDelegations(ctx, &zone, valAddr)
-
-	return &types.QueryValidatorDelegationsResponse{Delegations: delegations}, nil
 }
 
 func (k Keeper) ZoneWithdrawalRecords(c context.Context, req *types.QueryWithdrawalRecordsRequest) (*types.QueryWithdrawalRecordsResponse, error) {

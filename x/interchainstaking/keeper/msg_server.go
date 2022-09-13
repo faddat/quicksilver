@@ -100,11 +100,11 @@ func (k msgServer) RequestRedemption(goCtx context.Context, msg *types.MsgReques
 	}
 
 	if !zone.LiquidityModule {
-		if err = k.processRedemptionForLsm(ctx, zone, sender, msg.DestinationAddress, nativeTokens, msg.Value, hashString); err != nil {
+		if err = k.processRedemptionForLsm(ctx, *zone, sender, msg.DestinationAddress, nativeTokens, msg.Value, hashString); err != nil {
 			return nil, err
 		}
 	} else {
-		if err = k.queueRedemption(ctx, zone, sender, msg.DestinationAddress, nativeTokens, msg.Value, hashString); err != nil {
+		if err = k.queueRedemption(ctx, *zone, sender, msg.DestinationAddress, nativeTokens, msg.Value, hashString); err != nil {
 			return nil, err
 		}
 	}
@@ -128,7 +128,7 @@ func (k msgServer) RequestRedemption(goCtx context.Context, msg *types.MsgReques
 }
 
 // processRedemptionForLsm will determine based on user intent, the tokens to return to the user, generate Redeem message and send them.
-func (k *Keeper) processRedemptionForLsm(ctx sdk.Context, zone *types.Zone, sender sdk.AccAddress, destination string, nativeTokens sdk.Int, burnAmount sdk.Coin, hash string) error {
+func (k *Keeper) processRedemptionForLsm(ctx sdk.Context, zone types.Zone, sender sdk.AccAddress, destination string, nativeTokens sdk.Int, burnAmount sdk.Coin, hash string) error {
 	intent, found := k.GetIntent(ctx, zone, sender.String(), false)
 	// msgs is slice of MsgTokenizeShares, so we can handle dust allocation later.
 	var msgs []*stakingtypes.MsgTokenizeShares
@@ -165,7 +165,7 @@ func (k *Keeper) processRedemptionForLsm(ctx sdk.Context, zone *types.Zone, send
 }
 
 // queueRedemption will determine based on zone intent, the tokens to unbond, and add a withdrawal record with status QUEUED.
-func (k *Keeper) queueRedemption(ctx sdk.Context, zone *types.Zone, sender sdk.AccAddress, destination string, nativeTokens sdk.Int, burnAmount sdk.Coin, hash string) error {
+func (k *Keeper) queueRedemption(ctx sdk.Context, zone types.Zone, sender sdk.AccAddress, destination string, nativeTokens sdk.Int, burnAmount sdk.Coin, hash string) error {
 	distribution := make(map[string]sdk.Int, 0)
 	outstanding := nativeTokens
 
@@ -208,7 +208,7 @@ func (k msgServer) SignalIntent(goCtx context.Context, msg *types.MsgSignalInten
 		Intents:   IntentSliceToMap(msg.Intents),
 	}
 
-	k.SetIntent(ctx, &zone, intent, false)
+	k.SetIntent(ctx, zone, intent, false)
 
 	// ctx.EventManager().EmitEvents(sdk.Events{
 	// 	sdk.NewEvent(

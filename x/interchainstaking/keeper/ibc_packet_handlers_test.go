@@ -66,7 +66,6 @@ func TestHandleMsgTransferBadRecipient(t *testing.T) {
 		Receiver:      recipient.String(),
 	}
 	require.Error(t, app.InterchainstakingKeeper.HandleMsgTransfer(ctx, &transferMsg))
-
 }
 
 // func (s *KeeperTestSuite) TestHandleSendToDelegate() {

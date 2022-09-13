@@ -10,7 +10,7 @@ import (
 	"github.com/ingenuity-build/quicksilver/x/interchainstaking/types"
 )
 
-func (k Keeper) getStoreKey(zone *types.Zone, snapshot bool) []byte {
+func (k Keeper) getStoreKey(zone types.Zone, snapshot bool) []byte {
 	if snapshot {
 		return append(types.KeyPrefixSnapshotIntent, []byte(zone.ChainId)...)
 	}
@@ -18,7 +18,7 @@ func (k Keeper) getStoreKey(zone *types.Zone, snapshot bool) []byte {
 }
 
 // GetIntent returns intent info by zone and delegator
-func (k Keeper) GetIntent(ctx sdk.Context, zone *types.Zone, delegator string, snapshot bool) (types.DelegatorIntent, bool) {
+func (k Keeper) GetIntent(ctx sdk.Context, zone types.Zone, delegator string, snapshot bool) (types.DelegatorIntent, bool) {
 	intent := types.DelegatorIntent{}
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), k.getStoreKey(zone, snapshot))
 	bz := store.Get([]byte(delegator))
@@ -31,20 +31,20 @@ func (k Keeper) GetIntent(ctx sdk.Context, zone *types.Zone, delegator string, s
 }
 
 // SetIntent store the delegator intent
-func (k Keeper) SetIntent(ctx sdk.Context, zone *types.Zone, intent types.DelegatorIntent, snapshot bool) {
+func (k Keeper) SetIntent(ctx sdk.Context, zone types.Zone, intent types.DelegatorIntent, snapshot bool) {
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), k.getStoreKey(zone, snapshot))
 	bz := k.cdc.MustMarshal(&intent)
 	store.Set([]byte(intent.Delegator), bz)
 }
 
 // DeleteIntent deletes delegator intent
-func (k Keeper) DeleteIntent(ctx sdk.Context, zone *types.Zone, delegator string, snapshot bool) {
+func (k Keeper) DeleteIntent(ctx sdk.Context, zone types.Zone, delegator string, snapshot bool) {
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), k.getStoreKey(zone, snapshot))
 	store.Delete([]byte(delegator))
 }
 
 // IterateIntents iterate through intents for a given zone
-func (k Keeper) IterateIntents(ctx sdk.Context, zone *types.Zone, snapshot bool, fn func(index int64, intent types.DelegatorIntent) (stop bool)) {
+func (k Keeper) IterateIntents(ctx sdk.Context, zone types.Zone, snapshot bool, fn func(index int64, intent types.DelegatorIntent) (stop bool)) {
 	store := prefix.NewStore(ctx.KVStore(k.storeKey), k.getStoreKey(zone, snapshot))
 
 	iterator := sdk.KVStorePrefixIterator(store, nil)
@@ -66,7 +66,7 @@ func (k Keeper) IterateIntents(ctx sdk.Context, zone *types.Zone, snapshot bool,
 }
 
 // AllIntents returns every intent in the store for the specified zone
-func (k Keeper) AllIntents(ctx sdk.Context, zone *types.Zone, snapshot bool) []types.DelegatorIntent {
+func (k Keeper) AllIntents(ctx sdk.Context, zone types.Zone, snapshot bool) []types.DelegatorIntent {
 	intents := []types.DelegatorIntent{}
 	k.IterateIntents(ctx, zone, snapshot, func(_ int64, intent types.DelegatorIntent) (stop bool) {
 		intents = append(intents, intent)
@@ -76,7 +76,7 @@ func (k Keeper) AllIntents(ctx sdk.Context, zone *types.Zone, snapshot bool) []t
 }
 
 // AllIntents returns every intent in the store for the specified zone
-func (k Keeper) AllIntentsAsPointer(ctx sdk.Context, zone *types.Zone, snapshot bool) []*types.DelegatorIntent {
+func (k Keeper) AllIntentsAsPointer(ctx sdk.Context, zone types.Zone, snapshot bool) []*types.DelegatorIntent {
 	intents := []*types.DelegatorIntent{}
 	k.IterateIntents(ctx, zone, snapshot, func(_ int64, intent types.DelegatorIntent) (stop bool) {
 		intents = append(intents, &intent)
@@ -86,7 +86,7 @@ func (k Keeper) AllIntentsAsPointer(ctx sdk.Context, zone *types.Zone, snapshot 
 }
 
 // AllOrdinalizedIntents returns every intent in the store for the specified zone.
-func (k Keeper) AllOrdinalizedIntents(ctx sdk.Context, zone *types.Zone, snapshot bool) ([]types.DelegatorIntent, error) {
+func (k Keeper) AllOrdinalizedIntents(ctx sdk.Context, zone types.Zone, snapshot bool) ([]types.DelegatorIntent, error) {
 	intents := []types.DelegatorIntent{}
 	var err error
 	k.IterateIntents(ctx, zone, snapshot, func(_ int64, intent types.DelegatorIntent) (stop bool) {
@@ -107,7 +107,7 @@ func (k Keeper) AllOrdinalizedIntents(ctx sdk.Context, zone *types.Zone, snapsho
 	return intents, nil
 }
 
-func (k *Keeper) AggregateIntents(ctx sdk.Context, zone *types.Zone) error {
+func (k *Keeper) AggregateIntents(ctx sdk.Context, zone types.Zone) error {
 	var err error
 	snapshot := false
 	aggregate := map[string]*types.ValidatorIntent{}
@@ -151,11 +151,11 @@ func (k *Keeper) AggregateIntents(ctx sdk.Context, zone *types.Zone) error {
 	k.Logger(ctx).Error("aggregates", "agg", aggregate)
 
 	zone.AggregateIntent = aggregate
-	k.SetZone(ctx, zone)
+	k.SetZone(ctx, &zone)
 	return nil
 }
 
-func (k *Keeper) UpdateIntent(ctx sdk.Context, sender sdk.AccAddress, zone *types.Zone, inAmount sdk.Coins, memo string) error {
+func (k *Keeper) UpdateIntent(ctx sdk.Context, sender sdk.AccAddress, zone types.Zone, inAmount sdk.Coins, memo string) error {
 	snapshot := false
 	// this is here because we need access to the bankKeeper to ordinalize intent
 	intent, _ := k.GetIntent(ctx, zone, sender.String(), snapshot)

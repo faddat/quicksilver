@@ -2,6 +2,7 @@ package keeper
 
 import (
 	"math"
+	"sort"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/cosmos/cosmos-sdk/types/bech32"
@@ -137,7 +138,9 @@ func (k Keeper) IterateDelegatorDelegations(ctx sdk.Context, zone *types.Zone, d
 func (k *Keeper) PrepareDelegationMessagesForCoins(ctx sdk.Context, zone *types.Zone, allocations map[string]sdk.Int) []sdk.Msg {
 	var msgs []sdk.Msg
 	for _, valoper := range utils.Keys(allocations) {
-		msgs = append(msgs, &stakingTypes.MsgDelegate{DelegatorAddress: zone.DelegationAddress.Address, ValidatorAddress: valoper, Amount: sdk.NewCoin(zone.BaseDenom, allocations[valoper])})
+		if !allocations[valoper].IsZero() {
+			msgs = append(msgs, &stakingTypes.MsgDelegate{DelegatorAddress: zone.DelegationAddress.Address, ValidatorAddress: valoper, Amount: sdk.NewCoin(zone.BaseDenom, allocations[valoper])})
+		}
 	}
 	return msgs
 }
@@ -145,7 +148,9 @@ func (k *Keeper) PrepareDelegationMessagesForCoins(ctx sdk.Context, zone *types.
 func (k *Keeper) PrepareDelegationMessagesForShares(ctx sdk.Context, zone *types.Zone, coins sdk.Coins) []sdk.Msg {
 	var msgs []sdk.Msg
 	for _, coin := range coins.Sort() {
-		msgs = append(msgs, &stakingTypes.MsgRedeemTokensforShares{DelegatorAddress: zone.DelegationAddress.Address, Amount: coin})
+		if !coin.IsZero() {
+			msgs = append(msgs, &stakingTypes.MsgRedeemTokensforShares{DelegatorAddress: zone.DelegationAddress.Address, Amount: coin})
+		}
 	}
 	return msgs
 }
@@ -153,17 +158,15 @@ func (k *Keeper) PrepareDelegationMessagesForShares(ctx sdk.Context, zone *types
 func (k Keeper) DeterminePlanForDelegation(ctx sdk.Context, zone *types.Zone, amount sdk.Coins) map[string]sdk.Int {
 	currentAllocations, currentSum := k.GetDelegationMap(ctx, zone)
 	targetAllocations := zone.GetAggregateIntentOrDefault()
-	k.Logger(ctx).Error("aggregateIntent", "agg", targetAllocations)
-	allocations := determineAllocationsForDelegation(currentAllocations, currentSum, targetAllocations, amount)
-	k.Logger(ctx).Error("allocations", "all", allocations)
+	allocations := DetermineAllocationsForDelegation(currentAllocations, currentSum, targetAllocations, amount)
 	return allocations
 }
 
 // CalculateDeltas determines, for the current delegations, in delta between actual allocations and the target intent.
-func calculateDeltas(currentAllocations map[string]sdk.Int, currentSum sdk.Int, targetAllocations map[string]*types.ValidatorIntent) map[string]sdk.Int {
-	deltas := make(map[string]sdk.Int)
+func calculateDeltas(currentAllocations map[string]sdk.Int, currentSum sdk.Int, targetAllocations map[string]*types.ValidatorIntent) []types.ValidatorIntent {
+	deltas := make([]types.ValidatorIntent, 0)
 
-	// for target allocations, raise the intent weight by the total delegated value to get target amou
+	// for target allocations, raise the intent weight by the total delegated value to get target amount
 	for _, valoper := range utils.Keys(targetAllocations) {
 		current, ok := currentAllocations[valoper]
 		if !ok {
@@ -173,68 +176,80 @@ func calculateDeltas(currentAllocations map[string]sdk.Int, currentSum sdk.Int, 
 		// diff between target and current allocations
 		// positive == below target, negative == above target
 		delta := target.Sub(current)
-		deltas[valoper] = delta
+		deltas = append(deltas, types.ValidatorIntent{Weight: delta.ToDec(), ValoperAddress: valoper})
 	}
 
 	return deltas
 }
 
 // minDeltas returns the lowest value in a slice of Deltas.
-func minDeltas(deltas map[string]sdk.Int) sdk.Int {
+func minDeltas(deltas []types.ValidatorIntent) sdk.Int {
 	minValue := sdk.NewInt(math.MaxInt64)
-	for _, valoper := range utils.Keys(deltas) {
-		if minValue.GT(deltas[valoper]) {
-			minValue = deltas[valoper]
+	for _, intent := range deltas {
+		if minValue.GT(intent.Weight.TruncateInt()) {
+			minValue = intent.Weight.TruncateInt()
 		}
 	}
 
 	return minValue
 }
 
-func determineAllocationsForDelegation(currentAllocations map[string]sdk.Int, currentSum sdk.Int, targetAllocations map[string]*types.ValidatorIntent, amount sdk.Coins) map[string]sdk.Int {
+func DetermineAllocationsForDelegation(currentAllocations map[string]sdk.Int, currentSum sdk.Int, targetAllocations map[string]*types.ValidatorIntent, amount sdk.Coins) map[string]sdk.Int {
 	input := amount[0].Amount
 	deltas := calculateDeltas(currentAllocations, currentSum, targetAllocations)
 	minValue := minDeltas(deltas)
 	sum := sdk.ZeroInt()
 
 	// sort keys by relative value of delta
-	deltaKeys := utils.Keys(deltas)
+	sort.SliceStable(deltas, func(i, j int) bool {
+		return deltas[i].ValoperAddress > deltas[j].ValoperAddress
+	})
+
+	// sort keys by relative value of delta
+	sort.SliceStable(deltas, func(i, j int) bool {
+		return deltas[i].Weight.GT(deltas[j].Weight)
+	})
 
 	// raise all deltas such that the minimum value is zero.
-	for _, valoper := range deltaKeys {
-		deltas[valoper] = deltas[valoper].Add(minValue.Abs())
-		sum = sum.Add(deltas[valoper])
+	for idx := range deltas {
+		deltas[idx].Weight = deltas[idx].Weight.Add(minValue.Abs().ToDec())
+		sum = sum.Add(deltas[idx].Weight.TruncateInt())
 	}
 
 	// unequalSplit is the portion of input that should be distributed in attempt to make targets == 0
 	unequalSplit := sdk.MinInt(sum, input)
 
-	outSum := sdk.ZeroInt()
+	outSum := sdk.ZeroDec()
 	if !unequalSplit.IsZero() {
-		for _, valoper := range deltaKeys {
-			deltas[valoper] = deltas[valoper].ToDec().QuoInt(sum).MulInt(unequalSplit).TruncateInt()
-			outSum = outSum.Add(deltas[valoper])
+		for idx := range deltas {
+			deltas[idx].Weight = deltas[idx].Weight.QuoInt(sum).MulInt(unequalSplit)
+			outSum = outSum.Add(deltas[idx].Weight)
 		}
 	}
 
 	// equalSplit is the portion of input that should be distributed equally across all validators, once targets are zero.
-	equalSplit := input.Sub(unequalSplit)
+	equalSplit := input.Sub(unequalSplit).ToDec()
 
 	if !equalSplit.IsZero() {
-		outSum = sdk.ZeroInt() // rezero outsum
-		each := equalSplit.Quo(sdk.NewInt(int64(len(deltas))))
-		for _, valoper := range deltaKeys {
-			deltas[valoper] = deltas[valoper].Add(each)
-			outSum = outSum.Add(deltas[valoper])
+		outSum = sdk.ZeroDec() // rezero outsum
+		each := equalSplit.Quo(sdk.NewDec(int64(len(deltas))))
+		for idx := range deltas {
+			deltas[idx].Weight = deltas[idx].Weight.Add(each)
+			outSum = outSum.Add(deltas[idx].Weight)
 		}
 	}
 
 	// dust is the portion of the input that was truncated in previous calculations; add this to the first validator in the list,
 	// once sorted alphabetically. This will always be a small amount, and will count toward the delta calculations on the next run.
-	dust := input.Sub(outSum)
-	deltas[deltaKeys[0]] = deltas[deltaKeys[0]].Add(dust)
+	dust := input.Sub(outSum.TruncateInt())
+	deltas[0].Weight = deltas[0].Weight.Add(dust.ToDec())
 
-	return deltas
+	outWeights := make(map[string]sdk.Int)
+	for _, delta := range deltas {
+		outWeights[delta.ValoperAddress] = delta.Weight.TruncateInt()
+	}
+
+	return outWeights
 }
 
 func (k *Keeper) WithdrawDelegationRewardsForResponse(ctx sdk.Context, zone *types.Zone, delegator string, response []byte) error {
@@ -261,6 +276,7 @@ func (k *Keeper) WithdrawDelegationRewardsForResponse(ctx sdk.Context, zone *typ
 	})
 
 	if len(msgs) == 0 {
+		// always setZone here because calling method update waitgroup.
 		k.SetZone(ctx, zone)
 		return nil
 	}

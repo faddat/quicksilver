@@ -35,7 +35,7 @@ func (k Keeper) AfterEpochEnd(ctx sdk.Context, epochIdentifier string, epochNumb
 			)
 
 			k.Logger(ctx).Info("taking a snapshot of intents")
-			err := k.AggregateIntents(ctx, &zoneInfo)
+			err := k.AggregateIntents(ctx, zoneInfo)
 			if err != nil {
 				k.Logger(ctx).Error("encountered a problem aggregating intents; leaving aggregated intents unchanged since last epoch", "error", err.Error())
 			}
@@ -62,7 +62,7 @@ func (k Keeper) AfterEpochEnd(ctx sdk.Context, epochIdentifier string, epochNumb
 				"delegations",
 				0,
 			)
-			zoneInfo.DelegationAddress.IncrementBalanceWaitgroup()
+			// zoneInfo.DelegationAddress.IncrementBalanceWaitgroup()
 
 			rewardsQuery := distrtypes.QueryDelegationTotalRewardsRequest{DelegatorAddress: zoneInfo.DelegationAddress.Address}
 			bz = k.cdc.MustMarshal(&rewardsQuery)

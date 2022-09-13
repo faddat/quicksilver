@@ -36,25 +36,7 @@ service Query {
         "/quicksilver/interchainstaking/v1/zones/{chain_id}/delegations";
   }
 
-  // DelegatorDelegations provides data on the delegations from a given
-  // delegator for the given zone.
-  rpc DelegatorDelegations(QueryDelegatorDelegationsRequest)
-      returns (QueryDelegatorDelegationsResponse) {
-    option (google.api.http).get =
-        "/quicksilver/interchainstaking/v1/zones/{chain_id}/"
-        "delegator_delegations/{delegator_address}";
-  }
-
-  // ValidatorDelegations provides data on the delegations to a given validator
-  // for the given zone.
-  rpc ValidatorDelegations(QueryValidatorDelegationsRequest)
-      returns (QueryValidatorDelegationsResponse) {
-    option (google.api.http).get =
-        "/quicksilver/interchainstaking/v1/zones/{chain_id}/"
-        "validator_delegations/{validator_address}";
-  }
-
-  // WithdrawalRecords provides data on the active withdrawals.
+   // WithdrawalRecords provides data on the active withdrawals.
   rpc ZoneWithdrawalRecords(QueryWithdrawalRecordsRequest)
       returns (QueryWithdrawalRecordsResponse) {
     option (google.api.http).get =

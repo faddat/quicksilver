@@ -27,7 +27,7 @@ func deprotoizeIntMap(m map[string]sdk.Int) map[string]int64 {
 	return n
 }
 
-func (k Keeper) AddWithdrawalRecord(ctx sdk.Context, zone *types.Zone, delegator string, distribution map[string]sdk.Int, recipient string, amount sdk.Coins, burnAmount sdk.Coin, hash string, status int32, completionTime time.Time) {
+func (k Keeper) AddWithdrawalRecord(ctx sdk.Context, zone types.Zone, delegator string, distribution map[string]sdk.Int, recipient string, amount sdk.Coins, burnAmount sdk.Coin, hash string, status int32, completionTime time.Time) {
 	record := &types.WithdrawalRecord{ChainId: zone.ChainId, Delegator: delegator, Distribution: deprotoizeIntMap(distribution), Recipient: recipient, Amount: amount, Status: status, BurnAmount: burnAmount, Txhash: hash, CompletionTime: completionTime}
 	k.SetWithdrawalRecord(ctx, record)
 }

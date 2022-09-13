@@ -174,7 +174,11 @@ func (s *KeeperTestSuite) TestSignalIntent() {
 					FromAddress: TestOwnerAddress,
 				}
 			},
-			[]sdk.Dec{sdk.NewDecWithPrec(5, 1), sdk.NewDecWithPrec(2, 1), sdk.NewDecWithPrec(3, 1)},
+			[]sdk.Dec{
+				sdk.NewDecWithPrec(5, 1),
+				sdk.NewDecWithPrec(2, 1),
+				sdk.NewDecWithPrec(3, 1),
+			},
 			false,
 			false,
 		},
@@ -213,7 +217,7 @@ func (s *KeeperTestSuite) TestSignalIntent() {
 			zone, found := icsKeeper.GetZone(s.chainA.GetContext(), s.chainB.ChainID)
 			s.Require().True(found)
 
-			intent, found := icsKeeper.GetIntent(s.chainA.GetContext(), &zone, TestOwnerAddress, false)
+			intent, found := icsKeeper.GetIntent(s.chainA.GetContext(), zone, TestOwnerAddress, false)
 			s.Require().True(found)
 			intents := intent.GetIntents()
 
@@ -226,7 +230,6 @@ func (s *KeeperTestSuite) TestSignalIntent() {
 
 				s.Require().Equal(weight, valIntent.Weight)
 			}
-
 		})
 	}
 }
