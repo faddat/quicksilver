@@ -40,7 +40,7 @@ func (k Keeper) AfterEpochEnd(ctx sdk.Context, epochIdentifier string, epochNumb
 				k.Logger(ctx).Error("encountered a problem aggregating intents; leaving aggregated intents unchanged since last epoch", "error", err.Error())
 			}
 
-			err := k.Rebalance(ctx, zoneInfo)
+			err = k.Rebalance(ctx, zoneInfo)
 			if err != nil {
 				k.Logger(ctx).Error("encountered a problem rebalancing", "error", err.Error())
 			}

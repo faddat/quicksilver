@@ -360,4 +360,5 @@ func (k *Keeper) getRatio(ctx sdk.Context, zone types.Zone, epochRewards sdk.Int
 
 func (k *Keeper) Rebalance(ctx sdk.Context, zone types.Zone) error {
 	// TODO: rebalance
+	return nil
 }
