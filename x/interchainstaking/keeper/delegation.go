@@ -219,11 +219,9 @@ func DetermineAllocationsForDelegation(currentAllocations map[string]sdk.Int, cu
 	// unequalSplit is the portion of input that should be distributed in attempt to make targets == 0
 	unequalSplit := sdk.MinInt(sum, input)
 
-	outSum := sdk.ZeroDec()
 	if !unequalSplit.IsZero() {
 		for idx := range deltas {
 			deltas[idx].Weight = deltas[idx].Weight.QuoInt(sum).MulInt(unequalSplit)
-			outSum = outSum.Add(deltas[idx].Weight)
 		}
 	}
 
@@ -231,23 +229,23 @@ func DetermineAllocationsForDelegation(currentAllocations map[string]sdk.Int, cu
 	equalSplit := input.Sub(unequalSplit).ToDec()
 
 	if !equalSplit.IsZero() {
-		outSum = sdk.ZeroDec() // rezero outsum
 		each := equalSplit.Quo(sdk.NewDec(int64(len(deltas))))
 		for idx := range deltas {
 			deltas[idx].Weight = deltas[idx].Weight.Add(each)
-			outSum = outSum.Add(deltas[idx].Weight)
 		}
 	}
 
 	// dust is the portion of the input that was truncated in previous calculations; add this to the first validator in the list,
 	// once sorted alphabetically. This will always be a small amount, and will count toward the delta calculations on the next run.
-	dust := input.Sub(outSum.TruncateInt())
-	deltas[0].Weight = deltas[0].Weight.Add(dust.ToDec())
 
+	outSum := sdk.ZeroInt()
 	outWeights := make(map[string]sdk.Int)
 	for _, delta := range deltas {
 		outWeights[delta.ValoperAddress] = delta.Weight.TruncateInt()
+		outSum = outSum.Add(delta.Weight.TruncateInt())
 	}
+	dust := input.Sub(outSum)
+	outWeights[deltas[0].ValoperAddress] = outWeights[deltas[0].ValoperAddress].Add(dust)
 
 	return outWeights
 }
