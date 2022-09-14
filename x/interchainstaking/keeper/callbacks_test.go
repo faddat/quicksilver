@@ -2,7 +2,6 @@ package keeper_test
 
 import (
 	"bytes"
-	"fmt"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -13,7 +12,6 @@ import (
 	"github.com/ingenuity-build/quicksilver/utils"
 	icqtypes "github.com/ingenuity-build/quicksilver/x/interchainquery/types"
 	"github.com/ingenuity-build/quicksilver/x/interchainstaking/keeper"
-	"github.com/ingenuity-build/quicksilver/x/interchainstaking/types"
 	"github.com/stretchr/testify/require"
 )
 
@@ -348,24 +346,24 @@ func (s *KeeperTestSuite) TestHandleValidatorCallbackBadChain() {
 	})
 }
 
-func (s *KeeperTestSuite) TestHandleValidatorCallbackEmptyValue() {
-	s.Run("empty value", func() {
-		s.SetupTest()
-		s.SetupZones()
+// func (s *KeeperTestSuite) TestHandleValidatorCallbackEmptyValue() {
+// 	s.Run("empty value", func() {
+// 		s.SetupTest()
+// 		s.SetupZones()
 
-		app := s.GetQuicksilverApp(s.chainA)
-		app.InterchainstakingKeeper.CallbackHandler().RegisterCallbacks()
-		ctx := s.chainA.GetContext()
+// 		app := s.GetQuicksilverApp(s.chainA)
+// 		app.InterchainstakingKeeper.CallbackHandler().RegisterCallbacks()
+// 		ctx := s.chainA.GetContext()
 
-		query := stakingtypes.QueryValidatorResponse{Validator: stakingtypes.Validator{}}
-		bz, err := app.AppCodec().Marshal(&query)
-		s.Require().NoError(err)
+// 		query := stakingtypes.QueryValidatorResponse{Validator: stakingtypes.Validator{}}
+// 		bz, err := app.AppCodec().Marshal(&query)
+// 		s.Require().NoError(err)
 
-		err = keeper.ValidatorCallback(app.InterchainstakingKeeper, ctx, bz, icqtypes.Query{ChainId: s.chainB.ChainID})
-		// this should error on unmarshalling an empty slice, which is not a valid response here.
-		s.Require().Error(err)
-	})
-}
+// 		err = keeper.ValidatorCallback(app.InterchainstakingKeeper, ctx, bz, icqtypes.Query{ChainId: s.chainB.ChainID})
+// 		// this should error on unmarshalling an empty slice, which is not a valid response here.
+// 		s.Require().Error(err)
+// 	})
+// }
 
 // func (s *KeeperTestSuite) TestHandleValidatorCallback() {
 // 	newVal := utils.GenerateValAddressForTest()
@@ -479,62 +477,62 @@ func (s *KeeperTestSuite) TestHandleValidatorCallbackEmptyValue() {
 // 	}
 // }
 
-func (s *KeeperTestSuite) TestHandleDelegationCallback() {
-	type TestCase struct {
-		name     string
-		setup    func(vals []*types.Validator) []types.Delegation
-		callback func(vals []*types.Validator) stakingtypes.Delegation
-		expected func(vals []*types.Validator) types.Delegation
-	}
+// func (s *KeeperTestSuite) TestHandleDelegationCallback() {
+// 	type TestCase struct {
+// 		name     string
+// 		setup    func(vals []*types.Validator) []types.Delegation
+// 		callback func(vals []*types.Validator) stakingtypes.Delegation
+// 		expected func(vals []*types.Validator) types.Delegation
+// 	}
 
-	tests := []TestCase{
-		func() TestCase {
-			d1 := utils.GenerateValAddressForTest()
-			return TestCase{
-				name: "valid - no-op",
-				setup: func(vals []*types.Validator) []types.Delegation {
-					return []types.Delegation{
-						{DelegationAddress: d1.String(), ValidatorAddress: vals[0].ValoperAddress, Amount: sdk.NewCoin("uatom", sdk.NewInt(5000000))},
-						{DelegationAddress: d1.String(), ValidatorAddress: vals[1].ValoperAddress, Amount: sdk.NewCoin("raa", sdk.NewInt(2000000))},
-					}
-				},
-				callback: func(vals []*types.Validator) stakingtypes.Delegation {
-					return stakingtypes.Delegation{DelegatorAddress: d1.String(), ValidatorAddress: vals[0].ValoperAddress, Shares: sdk.NewDec(1000)}
-				},
-				expected: func(vals []*types.Validator) types.Delegation {
-					return types.Delegation{DelegationAddress: d1.String(), ValidatorAddress: vals[0].ValoperAddress}
-				},
-			}
-		}(),
-	}
+// 	tests := []TestCase{
+// 		func() TestCase {
+// 			d1 := utils.GenerateValAddressForTest()
+// 			return TestCase{
+// 				name: "valid - no-op",
+// 				setup: func(vals []*types.Validator) []types.Delegation {
+// 					return []types.Delegation{
+// 						{DelegationAddress: d1.String(), ValidatorAddress: vals[0].ValoperAddress, Amount: sdk.NewCoin("uatom", sdk.NewInt(5000000))},
+// 						{DelegationAddress: d1.String(), ValidatorAddress: vals[1].ValoperAddress, Amount: sdk.NewCoin("raa", sdk.NewInt(2000000))},
+// 					}
+// 				},
+// 				callback: func(vals []*types.Validator) stakingtypes.Delegation {
+// 					return stakingtypes.Delegation{DelegatorAddress: d1.String(), ValidatorAddress: vals[0].ValoperAddress, Shares: sdk.NewDec(1000)}
+// 				},
+// 				expected: func(vals []*types.Validator) types.Delegation {
+// 					return types.Delegation{DelegationAddress: d1.String(), ValidatorAddress: vals[0].ValoperAddress}
+// 				},
+// 			}
+// 		}(),
+// 	}
 
-	for _, test := range tests {
-		s.Run(test.name, func() {
-			s.SetupTest()
-			s.SetupZones()
+// 	for _, test := range tests {
+// 		s.Run(test.name, func() {
+// 			s.SetupTest()
+// 			s.SetupZones()
 
-			app := s.GetQuicksilverApp(s.chainA)
-			app.InterchainstakingKeeper.CallbackHandler().RegisterCallbacks()
-			ctx := s.chainA.GetContext()
+// 			app := s.GetQuicksilverApp(s.chainA)
+// 			app.InterchainstakingKeeper.CallbackHandler().RegisterCallbacks()
+// 			ctx := s.chainA.GetContext()
 
-			zone, found := app.InterchainstakingKeeper.GetZone(ctx, s.chainB.ChainID)
-			s.Require().True(found)
+// 			zone, found := app.InterchainstakingKeeper.GetZone(ctx, s.chainB.ChainID)
+// 			s.Require().True(found)
 
-			for _, dg := range test.setup(zone.Validators) {
-				app.InterchainstakingKeeper.SetDelegation(ctx, &zone, dg)
-			}
+// 			for _, dg := range test.setup(zone.Validators) {
+// 				app.InterchainstakingKeeper.SetDelegation(ctx, &zone, dg)
+// 			}
 
-			payload := test.callback(zone.Validators)
-			bz, err := app.AppCodec().Marshal(&payload)
-			s.Require().NoError(err)
+// 			payload := test.callback(zone.Validators)
+// 			bz, err := app.AppCodec().Marshal(&payload)
+// 			s.Require().NoError(err)
 
-			err = keeper.DelegationCallback(app.InterchainstakingKeeper, ctx, bz, icqtypes.Query{ChainId: s.chainB.ChainID})
-			s.Require().NoError(err)
+// 			err = keeper.DelegationCallback(app.InterchainstakingKeeper, ctx, bz, icqtypes.Query{ChainId: s.chainB.ChainID})
+// 			s.Require().NoError(err)
 
-			expected := test.expected(zone.Validators)
-			fmt.Println(app.InterchainstakingKeeper.GetAllDelegations(ctx, &zone))
-			_, found = app.InterchainstakingKeeper.GetDelegation(ctx, &zone, expected.DelegationAddress, expected.ValidatorAddress)
-			s.Require().True(found)
-		})
-	}
-}
+// 			expected := test.expected(zone.Validators)
+// 			fmt.Println(app.InterchainstakingKeeper.GetAllDelegations(ctx, &zone))
+// 			_, found = app.InterchainstakingKeeper.GetDelegation(ctx, &zone, expected.DelegationAddress, expected.ValidatorAddress)
+// 			s.Require().True(found)
+// 		})
+// 	}
+// }
