@@ -163,10 +163,6 @@ func SetValidatorsForZone(k *Keeper, ctx sdk.Context, zoneInfo types.Zone, data 
 		if !val.CommissionRate.Equal(validator.GetCommission()) || !val.VotingPower.Equal(validator.Tokens) || !val.DelegatorShares.Equal(validator.DelegatorShares) {
 			k.Logger(ctx).Info("Validator state change; fetching proof", "valoper", validator.OperatorAddress)
 
-			if err != nil {
-				return err
-			}
-
 			data := stakingTypes.GetValidatorKey(addr)
 			k.ICQKeeper.MakeRequest(
 				ctx,

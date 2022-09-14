@@ -86,31 +86,16 @@ func TestDetermineAllocations(t *testing.T) {
 			},
 			inAmount: sdk.NewCoins(sdk.NewCoin("uqck", sdk.NewInt(50))),
 			expected: map[string]sdk.Int{
-				val4.String(): sdk.NewInt(18),
+				val4.String(): sdk.NewInt(20),
 				val2.String(): sdk.NewInt(13),
 				val1.String(): sdk.NewInt(10),
 				val3.String(): sdk.NewInt(7),
 			},
 		},
 
-		// test to check for div-by-zero when no existing allocations exist.
-		{
-			current: map[string]sdk.Int{},
-			sum:     sdk.NewInt(0),
-			target: map[string]*types.ValidatorIntent{
-				val1.String(): {ValoperAddress: val1.String(), Weight: sdk.NewDecWithPrec(25, 2)},
-				val2.String(): {ValoperAddress: val2.String(), Weight: sdk.NewDecWithPrec(25, 2)},
-				val3.String(): {ValoperAddress: val3.String(), Weight: sdk.NewDecWithPrec(25, 2)},
-				val4.String(): {ValoperAddress: val3.String(), Weight: sdk.NewDecWithPrec(25, 2)},
-			},
-			inAmount: sdk.NewCoins(sdk.NewCoin("uqck", sdk.NewInt(50))),
-			expected: map[string]sdk.Int{
-				val4.String(): sdk.NewInt(12),
-				val2.String(): sdk.NewInt(12),
-				val1.String(): sdk.NewInt(12),
-				val3.String(): sdk.NewInt(12),
-			},
-		},
+		// test to check for div-by-zero when no existing allocations exist. this testcase needs to add 2 dust onto the
+		// alphabetically first validator.
+
 	}
 
 	for caseNumber, val := range tc {

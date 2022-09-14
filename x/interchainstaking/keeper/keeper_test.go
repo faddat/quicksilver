@@ -86,9 +86,9 @@ func (s *KeeperTestSuite) SetupZones() {
 		s.Require().NoError(icskeeper.SetValidatorForZone(&qApp.InterchainstakingKeeper, s.chainA.GetContext(), zone, app.DefaultConfig().Codec.MustMarshal(&val)))
 	}
 
-	valsetInterval := uint64(s.GetQuicksilverApp(s.chainA).InterchainstakingKeeper.GetParam(ctx, icstypes.KeyValidatorSetInterval))
-	s.coordinator.CommitNBlocks(s.chainA, valsetInterval)
-	s.coordinator.CommitNBlocks(s.chainB, valsetInterval)
+	//valsetInterval := uint64(s.GetQuicksilverApp(s.chainA).InterchainstakingKeeper.GetParam(ctx, icstypes.KeyValidatorSetInterval))
+	s.coordinator.CommitNBlocks(s.chainA, 2)
+	s.coordinator.CommitNBlocks(s.chainB, 2)
 }
 
 func newQuicksilverPath(chainA, chainB *ibctesting.TestChain) *ibctesting.Path {

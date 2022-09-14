@@ -471,7 +471,7 @@ func AccountBalanceCallback(k Keeper, ctx sdk.Context, args []byte, query icqtyp
 	if coin.IsNil() {
 		// if the balance returned is zero for a given denom, we just get a nil response.
 		// lookup the denom from the request so we can set a zero value coin for the correct denom.
-		coin, err = coinFromRequestKey(query.Request, accAddr)
+		coin, err = CoinFromRequestKey(query.Request, accAddr)
 		if err != nil {
 			return err
 		}
@@ -511,7 +511,7 @@ func AllBalancesCallback(k Keeper, ctx sdk.Context, args []byte, query icqtypes.
 }
 
 // coinFromRequestKey parses
-func coinFromRequestKey(query []byte, accAddr sdk.AccAddress) (sdk.Coin, error) {
+func CoinFromRequestKey(query []byte, accAddr sdk.AccAddress) (sdk.Coin, error) {
 	idx := bytes.Index(query, accAddr)
 	if idx == -1 {
 		return sdk.Coin{}, errors.New("AccountBalanceCallback: invalid request query")

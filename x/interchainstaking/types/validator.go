@@ -5,12 +5,32 @@ import (
 	"github.com/ingenuity-build/quicksilver/utils"
 )
 
+// check to see if two validator instances are equal. Used in testing.
+func (v Validator) IsEqual(other Validator) bool {
+	if v.ValoperAddress != other.ValoperAddress {
+		return false
+	}
+
+	if !v.CommissionRate.Equal(other.CommissionRate) {
+		return false
+	}
+
+	if !v.DelegatorShares.Equal(other.DelegatorShares) {
+		return false
+	}
+
+	if !v.VotingPower.Equal(other.VotingPower) {
+		return false
+	}
+	return true
+}
+
 func (v Validator) SharesToTokens(shares sdk.Dec) sdk.Int {
 	if v.DelegatorShares.IsZero() {
 		return sdk.ZeroInt()
 	}
 
-	return v.VotingPower.ToDec().Quo(v.DelegatorShares).TruncateInt()
+	return v.VotingPower.ToDec().Quo(v.DelegatorShares).Mul(shares).TruncateInt()
 }
 
 func (di DelegatorIntent) AddOrdinal(multiplier sdk.Dec, intents ValidatorIntents) DelegatorIntent {
