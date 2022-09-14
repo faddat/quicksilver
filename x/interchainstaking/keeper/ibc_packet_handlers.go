@@ -341,7 +341,7 @@ func (k *Keeper) handleSendToDelegate(ctx sdk.Context, zone *types.Zone, msg *ba
 
 	k.Logger(ctx).Error("messages to send", "messages", msgs)
 
-	//zone.DelegationAddress.Balance = zone.DelegationAddress.Balance.Add(msg.Amount...)
+	// zone.DelegationAddress.Balance = zone.DelegationAddress.Balance.Add(msg.Amount...)
 	return k.SubmitTx(ctx, msgs, zone.DelegationAddress, memo)
 }
 
@@ -644,7 +644,7 @@ func (k *Keeper) UpdateDelegationRecordsForAddress(ctx sdk.Context, zone types.Z
 				"delegation",
 				0,
 			)
-			//zone.DelegationAddress.IncrementBalanceWaitgroup() // does this get decremented?
+			// zone.DelegationAddress.IncrementBalanceWaitgroup() // does this get decremented?
 		}
 
 		if ok {
@@ -677,7 +677,7 @@ func (k *Keeper) UpdateDelegationRecordsForAddress(ctx sdk.Context, zone types.Z
 		)
 	}
 
-	//k.SetZone(ctx, &zone)
+	// k.SetZone(ctx, &zone)
 
 	return nil
 }

@@ -480,7 +480,6 @@ func (s *KeeperTestSuite) TestHandleValidatorCallbackEmptyValue() {
 // }
 
 func (s *KeeperTestSuite) TestHandleDelegationCallback() {
-
 	type TestCase struct {
 		name     string
 		setup    func(vals []*types.Validator) []types.Delegation
@@ -536,7 +535,6 @@ func (s *KeeperTestSuite) TestHandleDelegationCallback() {
 			fmt.Println(app.InterchainstakingKeeper.GetAllDelegations(ctx, &zone))
 			_, found = app.InterchainstakingKeeper.GetDelegation(ctx, &zone, expected.DelegationAddress, expected.ValidatorAddress)
 			s.Require().True(found)
-
 		})
 	}
 }
