@@ -111,6 +111,28 @@ func (k Keeper) Delegations(c context.Context, req *types.QueryDelegationsReques
 	return &types.QueryDelegationsResponse{Delegations: delegations, Tvl: sum}, nil
 }
 
+func (k Keeper) Receipts(c context.Context, req *types.QueryReceiptsRequest) (*types.QueryReceiptsResponse, error) {
+	if req == nil {
+		return nil, status.Error(codes.InvalidArgument, "empty request")
+	}
+
+	ctx := sdk.UnwrapSDKContext(c)
+
+	zone, found := k.GetZone(ctx, req.GetChainId())
+	if !found {
+		return nil, status.Error(codes.NotFound, fmt.Sprintf("no zone found matching %s", req.GetChainId()))
+	}
+
+	receipts := make([]types.Receipt, 0)
+
+	k.IterateZoneReceipts(ctx, &zone, func(_ int64, receipt types.Receipt) (stop bool) {
+		receipts = append(receipts, receipt)
+		return false
+	})
+
+	return &types.QueryReceiptsResponse{Receipts: receipts}, nil
+}
+
 func (k Keeper) ZoneWithdrawalRecords(c context.Context, req *types.QueryWithdrawalRecordsRequest) (*types.QueryWithdrawalRecordsResponse, error) {
 	// TODO: implement pagination
 	if req == nil {

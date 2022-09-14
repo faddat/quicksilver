@@ -36,6 +36,12 @@ service Query {
         "/quicksilver/interchainstaking/v1/zones/{chain_id}/delegations";
   }
 
+   // Delegations provides data on the delegations for the given zone.
+   rpc Receipts(QueryReceiptsRequest) returns (QueryReceiptsResponse) {
+    option (google.api.http).get =
+        "/quicksilver/interchainstaking/v1/zones/{chain_id}/receipts";
+  }
+
  
   // WithdrawalRecords provides data on the active withdrawals.
   rpc ZoneWithdrawalRecords(QueryWithdrawalRecordsRequest)
@@ -91,6 +97,16 @@ message QueryDelegationsResponse {
   repeated Delegation delegations = 1 [ (gogoproto.nullable) = false ];
   int64 tvl = 2;
   cosmos.base.query.v1beta1.PageResponse pagination = 3;
+}
+
+message QueryReceiptsRequest {
+  string chain_id = 1 [ (gogoproto.moretags) = "yaml:\"chain_id\"" ];
+  cosmos.base.query.v1beta1.PageRequest pagination = 2;
+}
+
+message QueryReceiptsResponse {
+  repeated Receipt receipts = 1 [ (gogoproto.nullable) = false ];
+  cosmos.base.query.v1beta1.PageResponse pagination = 2;
 }
 
 message QueryWithdrawalRecordsRequest {
